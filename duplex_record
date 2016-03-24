@@ -1,0 +1,228 @@
+#!/bin/bash
+#
+# duplex_record Copryright (C) 2016 Luís Fernando Carvalho Cavalheiro
+# Licence: GPLv3 (see below)
+# Short description: this script creates two virtual sinks in PulseAudio and
+# configures them to allow correct recording of an audio output (for example,
+# a game) and an audio input (for example, a microphone) at same time.
+#
+# ------------------------------- Legal notice -------------------------------
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Tradução não-oficial:
+#
+# Este programa é um software livre; você pode redistribuí-lo e/ou 
+# modificá-lo dentro dos termos da Licença Pública Geral GNU como 
+# publicada pela Fundação do Software Livre (FSF); na versão 3 da 
+# Licença, ou (na sua opinião) qualquer versão.
+#
+# Este programa é distribuído na esperança de que possa ser útil, 
+# mas SEM NENHUMA GARANTIA; sem uma garantia implícita de ADEQUAÇÃO
+# a qualquer MERCADO ou APLICAÇÃO EM PARTICULAR. Veja a
+# Licença Pública Geral GNU para maiores detalhes.
+#
+# Você deve ter recebido uma cópia da Licença Pública Geral GNU junto
+# com este programa. Se não, veja <http://www.gnu.org/licenses/>.
+#
+# ------------------------------- Legal notice -------------------------------
+#
+
+# Check for pavucontrol
+which pavucontrol > /dev/null 2>&1
+status_which=$?
+if [ $status_which -ne 0 ] ; then
+    echo "duplex_record needs pavucontrol installed! Please install it before running duplex_record!"
+    exit 1
+fi
+
+# Define funcionts
+
+version_info() {
+    cat << EOF
+
+    Copyright(C) 2016 Luís Fernando Carvalho Cavalheiro
+    Licenced under GPLv3. Please run "$ duplex_record -l" to read licence abstract
+
+    duplex_record: simple script to allow simultaneous recording of two different
+                   audio outputs or inputs. Since PulseAudio sinks config is easier
+                   done using pavucontrol, this script checks if it is installed
+                   and stops running if pavucontrol can't be found.
+
+    Version:    0.1 (20160324)
+                Script finalized. Basic tests done, published on
+                http://www.vivaolinux.com.br under "scripts" session
+
+EOF
+}
+
+open_pavucontrol() {
+    read -e -n 1 -p "Do you want to run pavucontrol to configure audio inputs and outputs (Y/N)? " open_pavucontrol
+    case $open_pavucontrol in
+        [Yy] )
+            pavucontrol &
+            ;;
+        [Nn] )
+            echo "Please remember to manually run pavucontrol to configure audio inputs and outputs!"
+            ;;
+        * )
+            echo "Invalid option! Please answer Y or N."
+            open_pavucontrol
+            ;;
+    esac
+}
+
+
+create_virtual_sinks() {
+    pactl load-module module-null-sink sink_name=first_out sink_properties=device.description="Virtual_$DUPLEX_MIC" > /dev/null && echo "Virtual sink \"Virtual_mic\" created! Please use pavucontrol to point your desired recording devices to it"
+    pactl load-module module-null-sink sink_name=second_out sink_properties=device.description="Virtual_$DUPLEX_LINE" > /dev/null && echo "Virtual sink \"Virtual_line\" created! Please use pavucontrol to point all outputs you want to record to it."
+    # Loopback second virtual sink to default output
+    pactl load-module module-loopback source=second_out.monitor > /dev/null
+    # Loopback second virtual sink to first virtual sink
+    pactl load-module module-loopback source=second_out.monitor sink=first_out > /dev/null
+    # Loopback first virtual sink to default output
+    pactl load-module module-loopback sink=first_out > /dev/null
+    open_pavucontrol
+}
+
+remove_virtual_sinks() {
+    pactl unload-module module-loopback > /dev/null
+    pactl unload-module module-null-sink > /dev/null
+    echo "All virtual sinks removed! Please run pavucontrol to check your audio inputs and outputs."
+    open_pavucontrol
+}
+
+licence_text() {
+    cat << EOF
+
+    Copyright(C) 2016 Luís Fernando Carvalho Cavalheiro
+    Licenced under GPLv3. Please run "$ duplex_record -l" to read licence abstract
+
+    duplex_record: simple script to allow simultaneous recording of two different
+                   audio outputs or inputs. Since PulseAudio sinks config is easier
+                   done using pavucontrol, this script checks if it is installed
+                   and stops running if pavucontrol can't be found.
+
+    Generic Public Licence, version 3, abstract:
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+EOF
+}
+
+help_text() {
+    cat << EOF
+
+    Copyright(C) 2016 Luís Fernando Carvalho Cavalheiro
+    Licenced under GPLv3. Please run "$ duplex_record -l" to read licence abstract
+
+    duplex_record: simple script to allow simultaneous recording of two different
+                   audio outputs or inputs. Since PulseAudio sinks config is easier
+                   done using pavucontrol, this script checks if it is installed
+                   and stops running if pavucontrol can't be found.
+
+    Usage
+    
+    duplex_record [-c | -C | -L | -h | -v ] [ -m arg ] [ -l arg ]
+
+    Options
+    -c          Required: create two virtual sinks
+    -C          Required: delete virtual sink. Ignores -m and -l options
+    -m arg      Optional: name virtual mic sink (default: Mic)
+                "arg" must be a single-word, no quotes, no special characters, string
+    -l arg      Optional: name virtual line sink, (default: Line)
+                "arg" must be a single-word, no quotes, no special characters, string
+    -L          Show GPLv3 licence abstract, ignores -m and -l options
+    -h          Show this help, ignores -m and -l options
+    -v          Show version and changelog info, ignores -m and -l options
+
+    In case -c, -C, -L, -h or -v being issued at same time, only the last one will be considered
+
+EOF
+}
+
+# Eval command line options
+while getopts ":m:l:cCLhv" opt ; do
+    case "$opt" in
+        c)
+            ACTION="c"
+            ;;
+        C)
+            ACTION="C"
+            ;;
+        L)
+            ACTION="l"
+            ;;
+        h)
+            ACTION="h"
+            ;;
+        v)
+            ACTION="v"
+            ;;
+        m)
+            DUPLEX_MIC=$OPTARG
+            ;;
+        l)
+            DUPLEX_LINE=$OPTARG
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            exit 1
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Shows help text if no option is provided
+if [ $OPTIND -eq 1 ] ; then
+    cat << EOF
+
+    duplex_record requires at least one valid option!
+
+EOF
+    ACTION="h"
+fi
+
+# Do as defined for last option among -c, -C, -l and -h
+case $ACTION in
+    c)
+        DUPLEX_MIC=${DUPLEX_MIC:-Mic}
+        DUPLEX_LINE=${DUPLEX_LINE:-Line}
+        create_virtual_sinks
+        ;;
+    C)
+        remove_virtual_sinks
+        ;;
+    l)
+        licence_text
+        ;;
+    h)
+        help_text
+        ;;
+    v)
+        version_info
+        ;;
+esac
