@@ -136,8 +136,8 @@ help_text() {
     Copyright(C) 2016 Luís Fernando Carvalho Cavalheiro
     Licenced under GPLv3. Please run "$ duplex_record -l" to read licence abstract
 
-    duplex_record: simple script to allow simultaneous recording of two different
-                   audio outputs or inputs. Since PulseAudio sinks config is easier
+    duplex_record: simple script to allow simultaneous recording of an application
+                   audio output and mic. Since PulseAudio sinks config is easier
                    done using pavucontrol, this script checks if it is installed
                    and stops running if pavucontrol can't be found.
 
@@ -156,7 +156,16 @@ help_text() {
     -h          Show this help, ignores -m and -l options
     -v          Show version and changelog info, ignores -m and -l options
 
-    In case -c, -C, -L, -h or -v being issued at same time, only the last one will be considered
+    In case -c, -C, -L, -h or -v being issued at same time, only the last one will be
+    considered
+
+    After creating sinks (with -c option), go to pavucontrol and:
+    1) Set application audio output to virtual line sink (default name:
+    Virtual_Line);
+    2) Set recording device to use Monitor of virtual mic sink (default:
+    Virtual_Mic);
+    This script will ask to you if you want to run pavucontrol every time you use -c
+    or -C options.
 
 EOF
 }
